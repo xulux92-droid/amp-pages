@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GET GIT Backlink List</title>
+  <meta name="robots" content="index, follow" />
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #050505;
+      color: #fff;
+      padding: 24px;
+    }
+    .wrap {
+      max-width: 1100px;
+      margin: auto;
+    }
+    h1 {
+      color: #ffd166;
+      text-align: center;
+    }
+    .stats {
+      text-align: center;
+      margin: 14px 0 24px;
+      color: #ccc;
+    }
+    .grid {
+      display: grid;
+      gap: 10px;
+    }
+    .item {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .item a {
+      color: #00eaff;
+      text-decoration: none;
+      font-weight: 700;
+      word-break: break-all;
+    }
+    .item small {
+      display: block;
+      margin-top: 6px;
+      color: #aaa;
+      word-break: break-all;
+    }
+    .loading {
+      text-align: center;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>GET GIT Backlink List</h1>
+    <div class="stats" id="stats">Loading data...</div>
+    <div class="grid" id="list"></div>
+  </div>
+
+  <script>
+    const files = [
+      "get-link.html",
+      "get-konten.html"
+    ];
+
+    async function loadFile(file) {
+      const res = await fetch(file + "?v=" + Date.now());
+      if (!res.ok) throw new Error("Gagal load " + file);
+      return await res.text();
+    }
+
+    function extractLinks(html, source) {
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      return Array.from(doc.querySelectorAll("a[href]")).map(a => ({
+        url: a.href,
+        anchor: a.textContent.trim() || a.href,
+        source
+      }));
+    }
+
+    async function init() {
+      const listEl = document.getElementById("list");
+      const statsEl = document.getElementById("stats");
+
+      try {
+        let all = [];
+
+        for (const file of files) {
+          const html = await loadFile(file);
+          all = all.concat(extractLinks(html, file));
+        }
+
+        const seen = new Set();
+        const unique = all.filter(item => {
+          const key = item.url + "|" + item.anchor;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        statsEl.textContent = `Total backlink: ${unique.length}`;
+
+        listEl.innerHTML = unique.map(item => `
+          <div class="item">
+            <a href="${item.url}" target="_blank" rel="noopener">${item.anchor}</a>
+            <small>${item.url}</small>
+            <small>Source: ${item.source}</small>
+          </div>
+        `).join("");
+
+      } catch (err) {
+        statsEl.textContent = "Gagal memuat data.";
+        listEl.innerHTML = `<div class="item">${err.message}</div>`;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
